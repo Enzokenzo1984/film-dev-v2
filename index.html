@@ -1,0 +1,194 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Film Dev Timer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Film Dev">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;margin:0;background:#111;color:#eee}header{padding:14px 16px;background:#1d1d1d;position:sticky;top:0;z-index:2}h1{font-size:20px;margin:0}.wrap{padding:14px;max-width:980px;margin:auto}.card{background:#1b1b1b;border:1px solid #333;border-radius:14px;padding:14px;margin:12px 0}label{display:block;font-size:13px;color:#aaa;margin-top:10px}select,input,textarea,button{width:100%;box-sizing:border-box;border-radius:10px;border:1px solid #444;background:#0f0f0f;color:#fff;padding:10px;font-size:16px}button{background:#eee;color:#111;font-weight:700;margin-top:10px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row3{display:grid;grid-template-columns:1.4fr .7fr .7fr auto;gap:8px;align-items:end}.steps{display:grid;gap:8px}.step{padding:10px;border:1px solid #333;border-radius:10px;background:#151515}.step.done{color:#ff4b4b}.step.done .muted{color:#ff8a8a}.active{outline:2px solid #fff}.timer{font-size:54px;font-weight:800;text-align:center;margin:14px 0}.small{font-size:12px;color:#aaa;line-height:1.45}.pill{display:inline-block;border:1px solid #555;border-radius:99px;padding:3px 8px;margin:2px;font-size:12px;color:#ddd}.danger{background:#4b1515;color:#fff}.muted{color:#aaa}.list button{width:auto;margin:3px;padding:6px 10px}.filmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}.film{border:1px solid #333;border-radius:12px;padding:10px;background:#151515}.film h3{margin:0 0 6px;font-size:16px}.refSteps{margin-top:8px;border-top:1px solid #333;padding-top:8px}.mini{font-size:13px}.soundOk{color:#9f9}.soundBad{color:#ffb}.alarmFlash{animation:alarmBg .55s infinite}.alarmOverlay{display:none;position:fixed;inset:0;background:rgba(120,0,0,.92);z-index:9999;color:white;align-items:center;justify-content:center;text-align:center;padding:24px}.alarmOverlay.show{display:flex}.alarmBox{max-width:520px}.alarmBox h1{font-size:54px;margin:0 0 12px}.alarmBox p{font-size:22px;margin:8px 0 18px}.alarmBox button{font-size:22px;padding:16px;border-radius:14px}@keyframes alarmBg{0%{background:#111}50%{background:#5b0808}100%{background:#111}}@media(max-width:600px){.row,.row3{grid-template-columns:1fr}.timer{font-size:44px}}
+</style></head><body><div id="alarmOverlay" class="alarmOverlay"><div class="alarmBox"><h1>TIME UP</h1><p id="alarmText">Step Finished</p><button onclick="stopAlarm()">Stop Alarm / 停止提醒</button></div></div><header><h1>Film Dev Timer + 参考资料库</h1></header><div class="wrap">
+
+<div class="card small"><b>PWA 离线模式：</b>第一次用 Safari 打开后，按 iPhone 分享 → 加入主画面。之后可从主画面打开，资料会缓存离线使用。计时提醒已加强：时间到会持续大声双音警报、画面闪烁、可按 Stop Alarm 停止。iPhone 仍建议不要锁屏、不要静音。</div>
+<div class="card small">现在的逻辑：<b>Timer 只跑你自己建立/保存的流程</b>。下面资料库只是参考，不会自动控制你的步骤。</div>
+
+<div class="card"><h2>自己加入流程与时间</h2>
+<label>流程名称</label><input id="customName" placeholder="例如：HP5 DD-X 我自己的流程">
+<div class="row3"><div><label>步骤名</label><input id="stepName" placeholder="Developer"></div><div><label>分钟</label><input id="stepMin" type="number" min="0" placeholder="06"></div><div><label>秒</label><input id="stepSecond" type="number" min="0" max="59" placeholder="30"></div><button onclick="addStep()">加入步骤</button></div>
+<label>步骤列表（也可以直接改；每行：步骤名, MM:SS）</label><textarea id="customSteps" rows="7" placeholder="Developer,06:30
+Stop,01:00
+Fix,05:00
+Wash,10:00"></textarea>
+<div class="row"><button onclick="useEditor()">用这个流程开始计时</button><button onclick="saveCustom()">保存配方</button></div>
+<div id="saved" class="list"></div></div>
+
+
+
+<div class="card"><h2>药水使用次数与加时</h2>
+<div class="row"><div><label>药水已经洗了多少卷</label><input id="chemRolls" type="number" min="0" placeholder="例如 6"></div><div><label>加多少 % 时间</label><input id="timeBoostPct" type="number" min="0" step="0.1" placeholder="例如 10"></div></div>
+<div class="small">填写加时 % 后，Timer 会把显影相关步骤自动加时。例：Developer 05:00 + 10% = 05:30。这里只影响计时，不会改掉你原本保存的配方。</div>
+</div>
+<div class="card"><h2>Push / Pull 提示（不会自动改流程）</h2>
+<div class="row"><div><label>胶片原本 ISO</label><input id="boxIso" type="number" placeholder="例如 400"></div><div><label>拍摄时使用 ISO</label><input id="shotIso" type="number" placeholder="例如 1600"></div></div>
+<div class="row"><button onclick="calcPush()">计算提示</button><button onclick="clearPush()">清除</button></div>
+<div id="pushResult" class="small">输入 ISO 后，只会提示 Push/Pull 档数和常见加减时间比例，不会修改你的 Timer。</div>
+</div>
+<div class="card"><h2 id="title">Timer</h2><div id="meta" class="small">请先自己建立流程，或载入你保存的配方。</div><div id="soundStatus" class="small soundBad">声音：第一次按「开始」会自动解锁；时间到会持续响到你按 Stop Alarm。iPhone 请不要静音。</div><label>Alarm Volume / 警报强度</label><select id="alarmMode"><option value="normal">Normal</option><option value="loud" selected>Loud</option><option value="max">Maximum</option></select><div class="row"><button onclick="testSound()">测试铃声 / 解锁声音</button><button class="danger" onclick="stopAlarm()">Stop Alarm / 停止提醒</button></div><div class="timer" id="clock">00:00</div><div class="row"><button onclick="startTimer()">开始 / 继续</button><button onclick="pauseTimer()">暂停</button></div><div class="row"><button onclick="nextStep()">下一步</button><button class="danger" onclick="resetTimer()">重置</button></div><div class="steps" id="steps"></div></div>
+
+<div class="card"><h2>胶片显影资料库（只作参考）</h2><div class="row"><div><label>品牌</label><select id="brand"></select></div><div><label>搜索</label><input id="q" placeholder="例：HP5, Portra, 4x5, D-76"></div></div><div id="films" class="filmgrid"></div></div>
+</div><script>
+const standard={
+ C41:[['Preheat / 预热',180],['Developer 38°C',195],['Bleach',390],['Wash',180],['Fix',390],['Wash',300],['Stabilizer / Final rinse',60],['Dry / 晾干',0]],
+ E6_6:['Prewash 38°C',60,'First Developer 38°C',390,'Wash',120,'Reversal Bath',120,'Color Developer',360,'Pre-Bleach',120,'Bleach',360,'Fix',240,'Wash',360,'Final Rinse',60].reduce((a,v,i,arr)=>i%2?a:a.concat([[v,arr[i+1]]]),[]),
+ ECN2:[['Prebath / Remjet softener',60],['Remjet rinse',120],['Developer 41°C',180],['Stop',30],['Wash',120],['Bleach',180],['Wash',120],['Fix',180],['Wash',300],['Final rinse',60]],
+ BWREV:[['First Developer',540],['Wash',120],['Bleach',360],['Clear',120],['Re-exposure',60],['Second Developer',300],['Fix',240],['Wash',600],['Final rinse',60]]
+};
+function bw(dev,time,temp='20°C'){return [['Prewash optional',60],[`${dev} ${temp}`,time],['Stop / Water stop',60],['Fix',300],['Wash',600],['Final rinse',60],['Dry',0]]}
+const DB=[
+{b:'Kodak',n:'Gold 200',iso:'200',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'ColorPlus 200',iso:'200',fmt:'135',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'UltraMax 400',iso:'400',fmt:'135',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'Pro Image 100',iso:'100',fmt:'135',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'Portra 160',iso:'160',fmt:'135/120/Sheet',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'Portra 400 / Ektacolor Pro 400',iso:'400',fmt:'135/120/Sheet',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'Portra 800',iso:'800',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'Ektar 100',iso:'100',fmt:'135/120/Sheet',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Kodak',n:'Ektachrome E100',iso:'100',fmt:'135/120/Sheet',p:'E-6',r:[['E-6 6-bath reference',standard.E6_6]]},{b:'Kodak',n:'Tri-X 400 / 400TX',iso:'400',fmt:'135/120',p:'B&W',r:[['D-76 stock 20°C 6:45',bw('D-76 stock',405)],['D-76 1+1 20°C 9:45',bw('D-76 1+1',585)],['HC-110 B 20°C 3:45',bw('HC-110 B',225)]]},{b:'Kodak',n:'Tri-X 320 / 320TXP',iso:'320',fmt:'Sheet',p:'B&W',r:[['D-76 stock 20°C 7:00',bw('D-76 stock',420)],['XTOL stock 20°C 6:45',bw('XTOL stock',405)]]},{b:'Kodak',n:'T‑MAX 100 / Ektapan 100',iso:'100',fmt:'135/120/Sheet',p:'B&W',r:[['T‑MAX Dev 1+4 20°C 6:30',bw('T‑MAX Dev 1+4',390)],['D-76 1+1 20°C 9:30',bw('D-76 1+1',570)]]},{b:'Kodak',n:'T‑MAX 400 / Ektapan 400',iso:'400',fmt:'135/120/Sheet',p:'B&W',r:[['T‑MAX Dev 1+4 20°C 6:15',bw('T‑MAX Dev 1+4',375)],['D-76 stock 20°C 8:00',bw('D-76 stock',480)]]},{b:'Kodak',n:'Double‑X 5222',iso:'250/200',fmt:'135 bulk',p:'B&W/ECN‑2 BW',r:[['D-96 stock 20°C 7:00',bw('D-96 stock',420)],['D-76 stock 20°C 6:00',bw('D-76 stock',360)]]},
+{b:'Ilford',n:'HP5 Plus',iso:'400',fmt:'135/120/Sheet',p:'B&W',r:[['ID-11 stock 20°C 7:30',bw('ID-11 stock',450)],['ID-11 1+1 20°C 13:00',bw('ID-11 1+1',780)],['DD-X 1+4 20°C 9:00',bw('Ilford DD-X 1+4',540)]]},{b:'Ilford',n:'FP4 Plus',iso:'125',fmt:'135/120/Sheet',p:'B&W',r:[['ID-11 stock 20°C 8:30',bw('ID-11 stock',510)],['ID-11 1+1 20°C 11:00',bw('ID-11 1+1',660)],['DD-X 1+4 20°C 10:00',bw('DD-X 1+4',600)]]},{b:'Ilford',n:'Delta 100',iso:'100',fmt:'135/120/Sheet',p:'B&W',r:[['ID-11 stock 20°C 8:30',bw('ID-11 stock',510)],['DD-X 1+4 20°C 12:00',bw('DD-X 1+4',720)]]},{b:'Ilford',n:'Delta 400',iso:'400',fmt:'135/120',p:'B&W',r:[['ID-11 stock 20°C 9:30',bw('ID-11 stock',570)],['DD-X 1+4 20°C 8:00',bw('DD-X 1+4',480)]]},{b:'Ilford',n:'Delta 3200',iso:'3200',fmt:'135/120',p:'B&W',r:[['DD-X 1+4 20°C 9:30 @ EI 3200',bw('DD-X 1+4',570)],['Microphen stock 20°C 9:00 @ EI 3200',bw('Microphen stock',540)]]},{b:'Ilford',n:'Pan F Plus 50',iso:'50',fmt:'135/120',p:'B&W',r:[['ID-11 stock 20°C 6:00',bw('ID-11 stock',360)],['DD-X 1+4 20°C 8:00',bw('DD-X 1+4',480)]]},{b:'Ilford',n:'SFX 200',iso:'200',fmt:'135/120',p:'B&W',r:[['ID-11 stock 20°C 10:30',bw('ID-11 stock',630)],['DD-X 1+4 20°C 10:00',bw('DD-X 1+4',600)]]},{b:'Ilford',n:'XP2 Super',iso:'400',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},
+{b:'Kentmere',n:'Pan 100',iso:'100',fmt:'135/120',p:'B&W',r:[['D-76 1+1 20°C 11:00',bw('D-76 1+1',660)],['Rodinal 1+50 20°C 13:00',bw('Rodinal 1+50',780)]]},{b:'Kentmere',n:'Pan 400',iso:'400',fmt:'135/120',p:'B&W',r:[['D-76 1+1 20°C 14:00',bw('D-76 1+1',840)],['Rodinal 1+50 20°C 20:00',bw('Rodinal 1+50',1200)]]},
+{b:'Foma',n:'Fomapan 100 Classic',iso:'100',fmt:'135/120/Sheet',p:'B&W',r:[['Rodinal 1+50 20°C 8:30',bw('Rodinal 1+50',510)],['D-76 stock 20°C 7:00',bw('D-76 stock',420)]]},{b:'Foma',n:'Fomapan 200 Creative',iso:'200',fmt:'135/120/Sheet',p:'B&W',r:[['Rodinal 1+50 20°C 8:00',bw('Rodinal 1+50',480)],['D-76 stock 20°C 7:00',bw('D-76 stock',420)]]},{b:'Foma',n:'Fomapan 400 Action',iso:'400',fmt:'135/120/Sheet',p:'B&W',r:[['Rodinal 1+50 20°C 11:00',bw('Rodinal 1+50',660)],['D-76 stock 20°C 7:00',bw('D-76 stock',420)]]},{b:'Foma',n:'Fomapan R100',iso:'100',fmt:'135/120/Movie',p:'B&W Reversal',r:[['B&W Reversal reference',standard.BWREV]]},{b:'Foma',n:'Retropan 320 Soft',iso:'320',fmt:'135/120/Sheet',p:'B&W',r:[['Rodinal 1+50 20°C 15:00',bw('Rodinal 1+50',900)],['Foma Retro Special 20°C 4:00',bw('Foma Retro Special',240)]]},
+{b:'Fujifilm',n:'400 / Superia type',iso:'400',fmt:'135',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Fujifilm',n:'Velvia 50',iso:'50',fmt:'135/120/Sheet',p:'E-6',r:[['E-6 6-bath reference',standard.E6_6]]},{b:'Fujifilm',n:'Velvia 100',iso:'100',fmt:'135/120/Sheet',p:'E-6',r:[['E-6 6-bath reference',standard.E6_6]]},{b:'Fujifilm',n:'Provia 100F',iso:'100',fmt:'135/120/Sheet',p:'E-6',r:[['E-6 6-bath reference',standard.E6_6]]},
+{b:'CineStill',n:'50D',iso:'50',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'CineStill',n:'400D',iso:'400',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'CineStill',n:'800T',iso:'800',fmt:'135/120/Sheet',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'CineStill',n:'BWXX',iso:'250',fmt:'135/120',p:'B&W',r:[['D-96 stock 20°C 7:00',bw('D-96 stock',420)],['D-76 stock 20°C 7:00',bw('D-76 stock',420)]]},{b:'CineStill',n:'Any B&W in DF96',iso:'various',fmt:'135/120',p:'Monobath',r:[['DF96 21°C 6:00 reference', [['DF96 Monobath',360],['Wash',300],['Final rinse',60],['Dry',0]]]]},
+{b:'Lomography',n:'Color Negative 100',iso:'100',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Lomography',n:'Color Negative 400',iso:'400',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Lomography',n:'Color Negative 800',iso:'800',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Lomography',n:'LomoChrome Purple',iso:'100-400',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Lomography',n:'LomoChrome Metropolis',iso:'100-400',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Lomography',n:'LomoChrome Turquoise',iso:'100-400',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'Lomography',n:'Lady Grey',iso:'400',fmt:'135/120',p:'B&W',r:[['D-76 1+1 20°C 10:00',bw('D-76 1+1',600)]]},{b:'Lomography',n:'Earl Grey',iso:'100',fmt:'135',p:'B&W',r:[['D-76 1+1 20°C 8:00',bw('D-76 1+1',480)]]},
+{b:'Adox',n:'CHS 100 II',iso:'100',fmt:'135/120/Sheet',p:'B&W',r:[['Rodinal 1+50 20°C 10:00',bw('Rodinal 1+50',600)],['D-76 stock 20°C 7:00',bw('D-76 stock',420)]]},{b:'Adox',n:'HR-50',iso:'50',fmt:'135/120/Sheet',p:'B&W',r:[['Adox FX-39 II 1+9 20°C 8:00',bw('Adox FX-39 II 1+9',480)],['Rodinal 1+50 20°C 12:00',bw('Rodinal 1+50',720)]]},{b:'Adox',n:'CMS 20 II',iso:'20',fmt:'135/120/Sheet',p:'B&W',r:[['Adotech IV 20°C 10:30',bw('Adotech IV',630)]]},{b:'Adox',n:'Scala 50',iso:'50',fmt:'135/120/4x5',p:'B&W Reversal',r:[['Scala Reversal Kit reference',standard.BWREV]]},
+{b:'Rollei',n:'RPX 25',iso:'25',fmt:'135/120',p:'B&W',r:[['Rodinal 1+50 20°C 11:00',bw('Rodinal 1+50',660)]]},{b:'Rollei',n:'RPX 100',iso:'100',fmt:'135/120/Sheet',p:'B&W',r:[['Rodinal 1+50 20°C 13:00',bw('Rodinal 1+50',780)],['D-76 1+1 20°C 11:00',bw('D-76 1+1',660)]]},{b:'Rollei',n:'RPX 400',iso:'400',fmt:'135/120',p:'B&W',r:[['Rodinal 1+50 20°C 20:00',bw('Rodinal 1+50',1200)],['D-76 1+1 20°C 13:00',bw('D-76 1+1',780)]]},{b:'Rollei',n:'Retro 80S',iso:'80',fmt:'135/120/Sheet',p:'B&W',r:[['Rodinal 1+50 20°C 11:00',bw('Rodinal 1+50',660)]]},{b:'Rollei',n:'Infrared 400',iso:'400',fmt:'135/120/Sheet',p:'B&W IR',r:[['Rodinal 1+50 20°C 12:00',bw('Rodinal 1+50',720)]]},{b:'Rollei',n:'Superpan 200',iso:'200',fmt:'135/120',p:'B&W',r:[['Rodinal 1+50 20°C 13:00',bw('Rodinal 1+50',780)]]},
+{b:'Bergger',n:'Pancro 400',iso:'400',fmt:'135/120/Sheet',p:'B&W',r:[['Bergger BER49 1+1 20°C 9:00',bw('BER49 1+1',540)],['D-76 1+1 20°C 12:00',bw('D-76 1+1',720)]]},{b:'Ferrania',n:'P30',iso:'80',fmt:'135',p:'B&W',r:[['D-76 stock 20°C 7:00',bw('D-76 stock',420)],['D-96 stock 20°C 8:00',bw('D-96 stock',480)],['HC-110 H 20°C 12:00',bw('HC-110 H',720)]]},{b:'Ferrania',n:'P33',iso:'160',fmt:'135',p:'B&W',r:[['Rodinal 1+25 20°C 11:00 reference',bw('Rodinal 1+25',660)],['Rodinal 1+100 20°C 60:00 semi-stand',bw('Rodinal 1+100 semi-stand',3600)]]},
+{b:'ORWO/Wolfen',n:'NP100',iso:'100',fmt:'135',p:'B&W',r:[['D-76 stock 20°C 8:00',bw('D-76 stock',480)]]},{b:'ORWO/Wolfen',n:'NC500',iso:'400/500',fmt:'135',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'ORWO/Wolfen',n:'NC400',iso:'400',fmt:'135',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'ORWO',n:'UN54',iso:'100',fmt:'135/Movie',p:'B&W',r:[['D-96 stock 20°C 7:00',bw('D-96 stock',420)],['D-76 stock 20°C 7:00',bw('D-76 stock',420)]]},{b:'ORWO',n:'N75',iso:'400',fmt:'135/Movie',p:'B&W',r:[['D-96 stock 20°C 7:00',bw('D-96 stock',420)]]},
+{b:'Washi',n:'W',iso:'25',fmt:'135',p:'B&W',r:[['Rodinal 1+100 20°C 12:00',bw('Rodinal 1+100',720)]]},{b:'Washi',n:'S',iso:'50',fmt:'135',p:'B&W',r:[['Rodinal 1+50 20°C 10:00',bw('Rodinal 1+50',600)]]},{b:'Washi',n:'X',iso:'100',fmt:'135',p:'B&W',r:[['Rodinal 1+50 20°C 12:00',bw('Rodinal 1+50',720)]]},
+{b:'JCH',n:'StreetPan 400',iso:'400',fmt:'135/120',p:'B&W',r:[['Rodinal 1+50 20°C 12:00',bw('Rodinal 1+50',720)],['D-76 1+1 20°C 11:00',bw('D-76 1+1',660)]]},{b:'CatLABS',n:'X Film 80',iso:'80',fmt:'120/Sheet',p:'B&W',r:[['D-76 stock 20°C 8:00',bw('D-76 stock',480)],['Rodinal 1+50 20°C 10:00',bw('Rodinal 1+50',600)]]},{b:'CatLABS',n:'X Film 320',iso:'320',fmt:'120/Sheet',p:'B&W',r:[['D-76 stock 20°C 11:00',bw('D-76 stock',660)]]},
+{b:'Harman',n:'Phoenix 200',iso:'200',fmt:'135/120',p:'C-41',r:[['C-41 Standard',standard.C41]]},{b:'AgfaPhoto',n:'APX 100',iso:'100',fmt:'135',p:'B&W',r:[['Rodinal 1+50 20°C 17:00',bw('Rodinal 1+50',1020)],['D-76 stock 20°C 8:00',bw('D-76 stock',480)]]},{b:'AgfaPhoto',n:'APX 400',iso:'400',fmt:'135',p:'B&W',r:[['Rodinal 1+50 20°C 30:00',bw('Rodinal 1+50',1800)],['D-76 stock 20°C 10:00',bw('D-76 stock',600)]]}
+];
+
+let current={steps:[],i:0,remain:0,t:null,done:{}};
+function sec(s){s=Math.max(0,parseInt(s||0));let m=Math.floor(s/60),x=s%60;return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')}
+function parseDuration(v){v=String(v||'').trim(); if(v.includes(':')){let a=v.split(':').map(x=>parseInt(x||0));return Math.max(0,(a[0]||0)*60+(a[1]||0))} return Math.max(0,parseInt(v||0))}
+function parseEditor(){return customSteps.value.trim().split('\n').map(l=>{let parts=l.split(',');let name=(parts[0]||'').trim();let time=parts.slice(1).join(',').trim();return [name,parseDuration(time)]}).filter(x=>x[0])}
+function addStep(){let n=stepName.value.trim(), m=parseInt(stepMin.value||0), ss=parseInt(stepSecond.value||0); if(!n)return alert('请填写步骤名'); if(ss>59)return alert('秒数请填 0-59'); let total=Math.max(0,m*60+ss); customSteps.value += (customSteps.value.trim()?'\n':'') + n + ',' + sec(total); stepName.value=''; stepMin.value=''; stepSecond.value='';}
+let audioCtx=null, soundUnlocked=false;
+function getAudioCtx(){
+  if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
+  return audioCtx;
+}
+function unlockSound(){
+  try{
+    let a=getAudioCtx();
+    if(a.state==='suspended') a.resume();
+    let o=a.createOscillator(), g=a.createGain();
+    o.connect(g); g.connect(a.destination);
+    g.gain.value=0.0001; o.frequency.value=440; o.start(); o.stop(a.currentTime+0.03);
+    soundUnlocked=true;
+    if(typeof soundStatus!=='undefined'){
+      soundStatus.textContent='声音：已解锁。时间到会用较大声双音警报，并尝试震动。';
+      soundStatus.className='small soundOk';
+    }
+  }catch(e){
+    if(typeof soundStatus!=='undefined'){
+      soundStatus.textContent='声音：浏览器限制声音，请先按测试铃声，iPhone 不要静音。';
+      soundStatus.className='small soundBad';
+    }
+  }
+}
+function currentAlarmSettings(){
+  let mode=(document.getElementById('alarmMode')?.value)||'loud';
+  if(mode==='normal') return {gain:.42, repeat:2500, dur:320, vib:[180,90,180]};
+  if(mode==='max') return {gain:.95, repeat:1300, dur:520, vib:[450,90,450,90,700]};
+  return {gain:.72, repeat:1800, dur:430, vib:[300,100,300,100,500]};
+}
+function playTone(freq=1200,dur=350,delay=0,gain=.7,type='square'){
+  try{
+    let a=getAudioCtx();
+    if(a.state==='suspended') a.resume();
+    let o=a.createOscillator(), g=a.createGain(), filter=a.createBiquadFilter();
+    o.type=type;
+    o.connect(filter); filter.connect(g); g.connect(a.destination);
+    filter.type='bandpass'; filter.frequency.value=freq; filter.Q.value=4;
+    o.frequency.setValueAtTime(freq,a.currentTime+delay);
+    // hard, piercing attack with short decay: louder on iPhone speakers than soft sine beep
+    g.gain.setValueAtTime(0.0001,a.currentTime+delay);
+    g.gain.linearRampToValueAtTime(gain,a.currentTime+delay+0.015);
+    g.gain.setValueAtTime(gain,a.currentTime+delay+dur/1000*.72);
+    g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+delay+dur/1000);
+    o.start(a.currentTime+delay); o.stop(a.currentTime+delay+dur/1000+0.04);
+  }catch(e){}
+}
+function alarmBurst(){
+  const s=currentAlarmSettings();
+  // dual-frequency lab alarm: high penetration but not a file, fully offline
+  playTone(1350,s.dur,0,s.gain,'square');
+  playTone(1850,s.dur*.9,0.28,s.gain,'square');
+  playTone(1350,s.dur,0.56,s.gain,'square');
+  if((document.getElementById('alarmMode')?.value)==='max'){
+    playTone(2400,260,0.88,s.gain,'sawtooth');
+    playTone(1600,320,1.05,s.gain,'square');
+  }
+}
+let alarmOn=false, alarmLoop=null, alarmStepIndex=null;
+function beepPattern(){
+  unlockSound();
+  const s=currentAlarmSettings();
+  if(navigator.vibrate) navigator.vibrate(s.vib);
+  alarmBurst();
+}
+function triggerAlarm(stepName='Step Finished'){
+  if(alarmOn) return;
+  alarmOn=true;
+  alarmStepIndex=current.i;
+  if(alarmStepIndex!==null && current.steps[alarmStepIndex]){
+    current.done[alarmStepIndex]=true;
+    renderSteps();
+  }
+  pauseTimer();
+  alarmText.textContent=stepName+' finished';
+  alarmOverlay.classList.add('show');
+  document.body.classList.add('alarmFlash');
+  beepPattern();
+  alarmLoop=setInterval(beepPattern,currentAlarmSettings().repeat);
+  setTimeout(()=>{ if(document.hidden) alert('时间到：'+stepName); },900);
+}
+function stopAlarm(){
+  if(alarmOn && alarmStepIndex!==null && current.steps[alarmStepIndex]){ current.done[alarmStepIndex]=true; }
+  alarmOn=false;
+  alarmStepIndex=null;
+  clearInterval(alarmLoop); alarmLoop=null;
+  alarmOverlay.classList.remove('show');
+  document.body.classList.remove('alarmFlash');
+}
+function testSound(){ unlockSound(); beepPattern(); }
+function shouldBoostStep(name){
+  name=String(name||'').toLowerCase();
+  return name.includes('developer')||name.includes('显影')||name.includes('d-76')||name.includes('id-11')||name.includes('dd-x')||name.includes('rodinal')||name.includes('xtol')||name.includes('hc-110')||name.includes('d-96')||name.includes('t-max');
+}
+function applyTimeBoost(steps){
+  let pct=parseFloat(document.getElementById('timeBoostPct')?.value||0);
+  if(!pct) return steps.map(s=>[s[0],s[1],s[1],false]);
+  return steps.map(s=>{
+    let boost=shouldBoostStep(s[0]);
+    let adjusted=boost?Math.round(s[1]*(1+pct/100)):s[1];
+    return [s[0],adjusted,s[1],boost];
+  });
+}
+function loadSteps(name, steps, note='自定义流程'){stopAlarm(); pauseTimer();let raw=steps.map(s=>[s[0],s[2]??s[1]]);current.steps=applyTimeBoost(raw);current.i=0;current.done={};current.remain=current.steps[0]?.[1]||0;title.textContent=name;let pct=parseFloat(document.getElementById('timeBoostPct')?.value||0);let rolls=document.getElementById('chemRolls')?.value||'';let extra=pct?` · 药水已洗 ${rolls||0} 卷 · 显影加时 ${pct}%`:(rolls?` · 药水已洗 ${rolls} 卷`:'');meta.textContent=note+extra;clock.textContent=sec(current.remain);renderSteps();}
+function useEditor(){let name=customName.value.trim()||'未命名流程';let st=parseEditor();if(!st.length)return alert('请先加入步骤');loadSteps(name,st,'自己建立的流程')}
+function renderSteps(){steps.innerHTML=current.steps.map((s,i)=>{let info=s[3]?`<br><span class=muted>原本 ${sec(s[2])} → 加时后 ${sec(s[1])}</span>`:`<br><span class=muted>${sec(s[1])}</span>`;let cls=`step ${i==current.i?'active':''} ${current.done[i]?'done':''}`;return `<div class="${cls}"><b>${i+1}. ${s[0]}</b>${info}</div>`}).join('')}
+function tick(){if(current.remain>0){current.remain--;clock.textContent=sec(current.remain)}else{triggerAlarm(current.steps[current.i]?.[0]||'Step')}}
+function startTimer(){unlockSound(); stopAlarm(); if(!current.steps.length)return alert('请先建立或载入一个自己的流程'); if(!current.t)current.t=setInterval(tick,1000)}
+function pauseTimer(){clearInterval(current.t);current.t=null}
+function nextStep(){if(alarmOn) stopAlarm(); pauseTimer();if(!current.steps.length)return;if(current.remain===0){current.done[current.i]=true;}if(current.i<current.steps.length-1){current.i++;current.remain=current.steps[current.i][1];clock.textContent=sec(current.remain);renderSteps()}else{current.done[current.i]=true;renderSteps();clock.textContent='完成';triggerAlarm('All steps')}}
+function resetTimer(){stopAlarm();pauseTimer();current.i=0;current.done={};current.remain=current.steps[0]?.[1]||0;clock.textContent=sec(current.remain);renderSteps()}
+function saveCustom(){let name=customName.value.trim();let st=parseEditor();if(!name||!st.length)return alert('请填写名称和步骤');let arr=JSON.parse(localStorage.customRecipes||'[]');arr.push({name,steps:st,used:0});localStorage.customRecipes=JSON.stringify(arr);showSaved()}
+function showSaved(){let arr=JSON.parse(localStorage.customRecipes||'[]');saved.innerHTML='<h3>已保存配方</h3>'+arr.map((x,i)=>`<button onclick="loadCustom(${i})">${x.name}（用过 ${x.used||0} 次）</button><button class=danger onclick="delCustom(${i})">删除</button>`).join('')}
+function loadCustom(i){let arr=JSON.parse(localStorage.customRecipes||'[]'),x=arr[i];x.used=(x.used||0)+1;localStorage.customRecipes=JSON.stringify(arr);customName.value=x.name;customSteps.value=x.steps.map(s=>s[0]+','+sec(s[1])).join('\n');loadSteps(x.name,x.steps,'已保存配方')}
+function delCustom(i){let arr=JSON.parse(localStorage.customRecipes||'[]');arr.splice(i,1);localStorage.customRecipes=JSON.stringify(arr);showSaved()}
+function calcPush(){let base=parseFloat(boxIso.value), shot=parseFloat(shotIso.value); if(!base||!shot)return pushResult.innerHTML='请先填写两个 ISO。'; let stops=Math.log2(shot/base); let rounded=Math.round(stops*10)/10; let abs=Math.abs(rounded); let dir=rounded>0?'Push 增感':rounded<0?'Pull 减感':'正常曝光'; let ratio=''; if(Math.abs(rounded)<0.25){ratio='不需要加减显影时间。'}else if(rounded>0){let pct=Math.round(abs*25); ratio='常见黑白参考：每 +1 stop 大约增加 20–30% 显影时间；你这次约提示增加 '+pct+'% 左右。C-41/E-6 建议优先按药水/胶片官方 push 表。'}else{let pct=Math.round(abs*20); ratio='常见黑白参考：每 -1 stop 大约减少 15–25% 显影时间；你这次约提示减少 '+pct+'% 左右。C-41/E-6 建议优先按药水/胶片官方 pull 表。'} pushResult.innerHTML='<b>'+dir+'：'+(rounded>0?'+':'')+rounded+' stop</b><br>原本 ISO '+base+' → 拍摄 ISO '+shot+'<br>'+ratio+'<br>这里只是提示，不会自动更改你的流程时间。'}
+function clearPush(){boxIso.value='';shotIso.value='';pushResult.textContent='输入 ISO 后，只会提示 Push/Pull 档数和常见加减时间比例，不会修改你的 Timer。'}
+function brands(){let arr=['全部' ,...[...new Set(DB.map(x=>x.b))].sort()];brand.innerHTML=arr.map(x=>`<option>${x}</option>`).join('');renderFilms()}
+function renderFilms(){let term=q.value.toLowerCase();let data=DB.filter(x=>(brand.value=='全部'||x.b==brand.value)&& (x.b+' '+x.n+' '+x.iso+' '+x.fmt+' '+x.p+' '+x.r.map(r=>r[0]).join(' ')).toLowerCase().includes(term));films.innerHTML=data.map((x,idx)=>`<div class=film><h3>${x.b} ${x.n}</h3><div class=small>ISO ${x.iso} · ${x.fmt} · ${x.p}</div><div class=refSteps>${x.r.map(r=>`<div class=mini><b>${r[0]}</b><br>${r[1].map(s=>`${s[0]}：${sec(s[1])}`).join('<br>')}</div>`).join('<hr style="border-color:#333">')}</div></div>`).join('')}
+brand.onchange=renderFilms;q.oninput=renderFilms;brands();showSaved();['chemRolls','timeBoostPct'].forEach(id=>{let el=document.getElementById(id); if(el) el.oninput=()=>{if(current.steps.length){let raw=current.steps.map(s=>[s[0],s[2]??s[1]]);loadSteps(title.textContent,raw,'已重新计算加时')}}});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});
+}
+</script></body></html>
